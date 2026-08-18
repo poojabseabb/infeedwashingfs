@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="1.0" xmlns:edmx="http://schemas.microsoft.com/ado/2007/06/edmx" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns:sap="http://www.sap.com/Protocols/SAPData">
+    <edmx:DataServices m:DataServiceVersion="2.0">
+        <Schema Namespace="ZEWM_WASHING_INFEED_SRV" xml:lang="en" sap:schema-version="1" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
+            <EntityType Name="WorkCenter" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="Workcenter"/>
+                </Key>
+                <Property Name="Workcenter" Type="Edm.String" Nullable="false" MaxLength="4" sap:unicode="false" sap:label="Work Center" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Palletnumber" Type="Edm.String" Nullable="false" MaxLength="20" sap:unicode="false" sap:label="Handling Unit" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Userallowed" Type="Edm.Boolean" Nullable="false" sap:unicode="false" sap:label="Boolean Variable (X = True, - = False, Space = Unknown)" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+            </EntityType>
+            <EntityType Name="SourceHu" sap:content-version="1">
+                <Key>
+                    <PropertyRef Name="Sourcehu"/>
+                    <PropertyRef Name="Workcenter"/>
+                </Key>
+                <Property Name="Sourcehu" Type="Edm.String" Nullable="false" MaxLength="20" sap:unicode="false" sap:label="Handling Unit" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Workcenter" Type="Edm.String" Nullable="false" MaxLength="4" sap:unicode="false" sap:label="Work Center" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Material" Type="Edm.String" Nullable="false" MaxLength="40" sap:unicode="false" sap:label="Product" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Itemdesc" Type="Edm.String" Nullable="false" MaxLength="40" sap:unicode="false" sap:label="Description" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="Liftingtool" Type="Edm.String" Nullable="false" MaxLength="30" sap:unicode="false" sap:label="Lifting Tool" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="QuantityInPal" Type="Edm.Int32" Nullable="false" sap:unicode="false" sap:label="Quantity in Pallet" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="QuantityReq" Type="Edm.Int32" Nullable="false" sap:unicode="false" sap:label="Quantity Required" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="QuantityRem" Type="Edm.Int32" Nullable="false" sap:unicode="false" sap:label="Quantity Remaining" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="QuantityLoaded" Type="Edm.Int32" Nullable="false" sap:unicode="false" sap:label="Quantity Loaded" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="ConfirmDelivery" Type="Edm.String" Nullable="false" MaxLength="30" sap:unicode="false" sap:label="Confirm Delivery" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+                <Property Name="WorkInstruction" Type="Edm.String" Nullable="false" MaxLength="30" sap:unicode="false" sap:label="Work Instruction" sap:creatable="false" sap:updatable="false" sap:sortable="false" sap:filterable="false"/>
+            </EntityType>
+            <EntityContainer Name="ZEWM_WASHING_INFEED_SRV_Entities" m:IsDefaultEntityContainer="true" sap:supported-formats="atom json xlsx">
+                <EntitySet Name="WorkCenterSet" EntityType="ZEWM_WASHING_INFEED_SRV.WorkCenter" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:addressable="false" sap:content-version="1"/>
+                <EntitySet Name="SourceHuSet" EntityType="ZEWM_WASHING_INFEED_SRV.SourceHu" sap:creatable="false" sap:updatable="false" sap:deletable="false" sap:pageable="false" sap:addressable="false" sap:content-version="1"/>
+            </EntityContainer>
+            <Annotation Term="Core.SchemaVersion" String="1.0.0" xmlns="http://docs.oasis-open.org/odata/ns/edm"/>
+            <atom:link rel="self" href="/sap/opu/odata/sap/ZEWM_WASHING_INFEED_SRV/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>
+            <atom:link rel="latest-version" href="/sap/opu/odata/sap/ZEWM_WASHING_INFEED_SRV/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>
+        </Schema>
+    </edmx:DataServices>
+</edmx:Edmx>
