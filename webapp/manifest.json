@@ -25,6 +25,19 @@
           "odataVersion": "2.0"
         }
       }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "ZINFEEDWASHINGFS-display": {
+          "semanticObject": "ZINFEEDWASHINGFS",
+          "action": "display",
+          "title": "{{ZINFEEDWASHINGFS-display.flpTitle}}",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
     }
   },
   "sap.ui": {

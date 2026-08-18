@@ -1,6 +1,154 @@
 <mvc:View controllerName="com.ewm.infeedwashingfs.controller.MainObjectPage"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m">
-    <Page id="page" title="{i18n>title}">
-    </Page>
+    xmlns:ndc="sap.ndc"
+	xmlns:c="sap.ui.core"
+	xmlns:u="sap.ui.unified"
+    xmlns:t="sap.ui.table"
+	xmlns:f="sap.f"
+	xmlns:layout="sap.ui.layout"
+    xmlns="sap.m"
+    height="100%">
+    <f:DynamicPage
+        id="page"
+        preserveHeaderStateOnScroll="true"
+        headerExpanded="true"
+        showFooter="true"
+        fitContent="true"
+    >
+		<!--  DynamicPage Title  -->
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading>
+					<Title text="Washing Infeed Station New" />
+				</f:heading>
+			</f:DynamicPageTitle>
+		</f:title>
+		<!--  DynamicPage Header  -->
+		<f:header>
+			<f:DynamicPageHeader pinnable="true">
+				<FlexBox
+                    alignItems="Start"
+                    justifyContent="SpaceBetween"
+                >
+					<items>
+						<Panel
+                            backgroundDesign="Transparent"
+                            class="sapUiNoContentPadding"
+                        >
+							<content>
+								<layout:HorizontalLayout allowWrapping="true">
+									<layout:VerticalLayout
+                                        class="sapUiMediumMarginEnd"
+                                    >
+										<ObjectAttribute
+											id="txtWCScannerResult"
+                                            title="Arbetsplats: "
+                                            text="Warehouse A"
+											
+                                        />
+										<ObjectAttribute
+                                            title="Pallet Nummer: "
+                                            text="23L"
+                                        />
+										<ObjectAttribute
+                                            title="Warehouse Number "
+                                            text="VAST"
+                                        />
+									</layout:VerticalLayout>
+									<layout:VerticalLayout>
+										<ndc:BarcodeScannerButton
+											id="btnWCBarcode"
+											scanSuccess=".onScanSuccess"
+											scanFail=".onScanError"
+											inputLiveUpdate=".onScanLiveupdate"
+											dialogTitle="Barcode Scanner Button"
+										/>
+									</layout:VerticalLayout>
+								</layout:HorizontalLayout>
+							</content>
+						</Panel>
+					</items>
+				</FlexBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<t:Table
+                rows="{/ProductCollection}"
+                selectionMode="MultiToggle"
+                rowMode="Auto"
+            >
+				<t:extension>
+					<OverflowToolbar style="Clear">
+						<Title text="Products" />
+					</OverflowToolbar>
+				</t:extension>
+				<t:columns>
+					<t:Column width="11rem">
+						<Label text="Source HU" />
+						<t:template>
+							<Text
+                                text="{Name}"
+                                wrapping="false"
+                            />
+						</t:template>
+					</t:Column>
+					<t:Column width="11rem">
+						<Label text="Lyftverktyg" />
+						<t:template>
+							<Text
+                                text="{Name}"
+                                wrapping="false"
+                            />
+						</t:template>
+					</t:Column>
+					<t:Column
+                        width="6rem"
+                        hAlign="End"
+                    >
+						<Label text="Antal I pall" />
+						<t:template>
+							<Label text="{Quantity}" />
+						</t:template>
+					</t:Column>
+					<t:Column width="9rem">
+						<Label text="Antal behov" />
+						<t:template>
+							<Label text="{Quantity}" />
+						</t:template>
+					</t:Column>
+					<t:Column width="9rem">
+						<Label text="Antal kvar i pall" />
+						<t:template>
+							<Label text="{Price}" />
+						</t:template>
+					</t:Column>
+					<t:Column width="12rem">
+						<Label text="Antal låstade på pallet" />
+						<t:template>
+							<Input value="{ProductId}" />
+						</t:template>
+					</t:Column>
+					<t:Column width="9rem">
+						<Label text="Bekräfta levernas" />
+						<t:template>
+							<Button
+                                text="Action"
+                                press=".handleDetailsPress"
+                            />
+						</t:template>
+					</t:Column>
+					<t:Column width="9rem">
+						<Label text="Arbets Instuktuion" />
+						<t:template>
+							<Link
+                                text="Instructions"
+                                href="{ProductPicUrl}"
+                                target="_blank"
+                            />
+						</t:template>
+					</t:Column>
+				</t:columns>
+			</t:Table>
+		</f:content>
+	</f:DynamicPage>
 </mvc:View>
