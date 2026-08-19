@@ -19,7 +19,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading>
-					<Title text="Washing Infeed Station New" />
+					<Title text="{i18n>WashingInfeedStationNew}" />
 				</f:heading>
 			</f:DynamicPageTitle>
 		</f:title>
@@ -42,16 +42,16 @@
                                     >
 										<ObjectAttribute
 											id="txtWCScannerResult"
-                                            title="Arbetsplats: "
+                                            title="{i18n>WorkCenter}"
                                             text="Warehouse A"
 											
                                         />
 										<ObjectAttribute
-                                            title="Pallet Nummer: "
+                                            title="{i18n>PalletNumber}"
                                             text="23L"
                                         />
 										<ObjectAttribute
-                                            title="Warehouse Number "
+                                            title="{i18n>WarehouseNumber}"
                                             text="VAST"
                                         />
 									</layout:VerticalLayout>
@@ -79,12 +79,12 @@
             >
 				<t:extension>
 					<OverflowToolbar style="Clear">
-						<Title text="Products" />
+						<Title text="{i18n>Products}" />
 					</OverflowToolbar>
 				</t:extension>
 				<t:columns>
 					<t:Column width="11rem">
-						<Label text="Source HU" />
+						<Label text="{i18n>SourceHU}" />
 						<t:template>
 							<Text
                                 text="{Name}"
@@ -93,7 +93,7 @@
 						</t:template>
 					</t:Column>
 					<t:Column width="11rem">
-						<Label text="Lyftverktyg" />
+						<Label text="{i18n>LiftingTool}" />
 						<t:template>
 							<Text
                                 text="{Name}"
@@ -105,31 +105,31 @@
                         width="6rem"
                         hAlign="End"
                     >
-						<Label text="Antal I pall" />
+						<Label text="{i18n>QuantityInPallet}" />
 						<t:template>
 							<Label text="{Quantity}" />
 						</t:template>
 					</t:Column>
 					<t:Column width="9rem">
-						<Label text="Antal behov" />
+						<Label text="{i18n>QuantityRequired}" />
 						<t:template>
 							<Label text="{Quantity}" />
 						</t:template>
 					</t:Column>
 					<t:Column width="9rem">
-						<Label text="Antal kvar i pall" />
+						<Label text="{i18n>QuantityRemaining}" />
 						<t:template>
 							<Label text="{Price}" />
 						</t:template>
 					</t:Column>
 					<t:Column width="12rem">
-						<Label text="Antal låstade på pallet" />
+						<Label text="{i18n>QuantityLoaded}" />
 						<t:template>
 							<Input value="{ProductId}" />
 						</t:template>
 					</t:Column>
 					<t:Column width="9rem">
-						<Label text="Bekräfta levernas" />
+						<Label text="{i18n>ConfirmDelivery}" />
 						<t:template>
 							<Button
                                 text="Action"
@@ -138,7 +138,7 @@
 						</t:template>
 					</t:Column>
 					<t:Column width="9rem">
-						<Label text="Arbets Instuktuion" />
+						<Label text="{i18n>WorkInstruction}" />
 						<t:template>
 							<Link
                                 text="Instructions"
