@@ -31,7 +31,6 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             sWorkCenter = sWorkCenter.trim();
             this._processWorkCenter(sWorkCenter);
             oViewModel.setProperty("/workCenter", sWorkCenter);
-            // Now call your WorkCenterSet
             this._getWorkCenterDetails(sWorkCenter);
         },
         /* ===================================================== */
@@ -52,9 +51,6 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 return;
             }
             var oViewModel = this.getView().getModel("viewModel");
-            /*
-             * Display scanned Work Center immediately.
-             */
             oViewModel.setProperty("/workCenter", sWorkCenter);
             /*
              * Reset pallet/table state whenever a new
@@ -88,8 +84,8 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             var aFilters = [
                 new Filter("Workcenter", FilterOperator.EQ, sWorkCenter)
             ];
-            oModel.read("/WorkCenterSet", {
-                filters: aFilters,
+            oModel.read("/WorkCenterSet(Workcenter='" + sWorkCenter + "')", {
+                // filters: aFilters,
                 success: function (oData) {
                     var oViewModel = this.getView().getModel("viewModel");
                     /*
@@ -205,8 +201,8 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 new Filter("Workcenter", FilterOperator.EQ, sWorkCenter),
                 new Filter("Palletnumber", FilterOperator.EQ, sPallet)
             ];
-            oModel.read("/SourceHuSet", {
-                filters: aFilters,
+            oModel.read("/SourceHuSet?(Sourcehu='" + sSourceHU + "', Workcenter='" + sWorkCenter + "')", {
+                // filters: aFilters,
                 success: function (oData) {
                     if (!oData || !oData.results || oData.results.length === 0) {
                         MessageToast.show("Source HU not found.");
