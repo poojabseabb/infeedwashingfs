@@ -1,21 +1,21 @@
 <mvc:View controllerName="com.ewm.infeedwashingfs.controller.MainObjectPage"
-    xmlns:mvc="sap.ui.core.mvc"
-    xmlns:ndc="sap.ndc"
-	xmlns:c="sap.ui.core"
-	xmlns:u="sap.ui.unified"
-    xmlns:t="sap.ui.table"
+	xmlns:mvc="sap.ui.core.mvc"
+	xmlns:ndc="sap.ndc"
+	xmlns:t="sap.ui.table"
 	xmlns:f="sap.f"
 	xmlns:layout="sap.ui.layout"
-    xmlns="sap.m"
+	xmlns="sap.m"
     height="100%">
-    <f:DynamicPage
+	<f:DynamicPage
         id="page"
         preserveHeaderStateOnScroll="true"
         headerExpanded="true"
         showFooter="true"
         fitContent="true"
     >
-		<!--  DynamicPage Title  -->
+		<!-- ===================================================== -->
+		<!-- DYNAMIC PAGE TITLE -->
+		<!-- ===================================================== -->
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading>
@@ -23,71 +23,145 @@
 				</f:heading>
 			</f:DynamicPageTitle>
 		</f:title>
-		<!--  DynamicPage Header  -->
+		<!-- ===================================================== -->
+		<!-- DYNAMIC PAGE HEADER -->
+		<!-- ===================================================== -->
 		<f:header>
 			<f:DynamicPageHeader pinnable="true">
-				<FlexBox
-                    alignItems="Start"
-                    justifyContent="SpaceBetween"
-                >
-					<items>
-						<Panel
-                            backgroundDesign="Transparent"
-                            class="sapUiNoContentPadding"
-                        >
-							<content>
-								<layout:HorizontalLayout allowWrapping="true">
-									<layout:VerticalLayout
+				<Panel
+					backgroundDesign="Transparent"
+					class="sapUiNoContentPadding"
+                    >
+					<content>
+						<layout:HorizontalLayout allowWrapping="true">
+						<!-- ===================================================== -->
+						<!-- HEADER INFO -->
+						<!-- ===================================================== -->
+							<layout:VerticalLayout
                                         class="sapUiMediumMarginEnd"
                                     >
-										<ObjectAttribute
-											id="txtWCScannerResult"
-                                            title="{i18n>WorkCenter}"
-                                            text="Warehouse A"
-											
-                                        />
-										<ObjectAttribute
-                                            title="{i18n>PalletNumber}"
-                                            text="23L"
-                                        />
-										<ObjectAttribute
-                                            title="{i18n>WarehouseNumber}"
-                                            text="VAST"
-                                        />
-									</layout:VerticalLayout>
-									<layout:VerticalLayout>
-										<ndc:BarcodeScannerButton
-											id="btnWCBarcode"
-											scanSuccess=".onScanSuccess"
-											scanFail=".onScanError"
-											inputLiveUpdate=".onScanLiveupdate"
-											dialogTitle="Barcode Scanner Button"
+								<!-- Work Center -->
+								<HBox
+                                    alignItems="Center"
+                                    class="sapUiTinyMarginBottom">
+ 
+                                    <ObjectAttribute
+                                        id="txtWCScannerResult"
+                                        title="{i18n>WorkCenter}"
+                                        text="{viewModel>/Workcenter}"
+                                        class="sapUiTinyMarginEnd" 
 										/>
-									</layout:VerticalLayout>
-								</layout:HorizontalLayout>
-							</content>
-						</Panel>
-					</items>
-				</FlexBox>
+ 
+                                    <ndc:BarcodeScannerButton
+                                        id="btnWCBarcode"
+                                        scanSuccess=".onWorkCenterScanSuccess"
+                                        scanFail=".onScanError"
+                                        inputLiveUpdate=".onWorkCenterLiveUpdate"
+                                        dialogTitle="Scan Work Center" />
+                                </HBox>
+
+								<!-- Pallet Number -->
+                                <HBox
+                                    alignItems="Center"
+                                    class="sapUiTinyMarginBottom">
+ 
+                                    <Label
+                                        text="{i18n>PalletNumber}"
+                                        width="5rem" />
+ 
+                                    <Input
+                                        id="palletInput"
+                                        value="{viewModel>/Palletnumber}"
+                                        editable="{viewModel>/palletEditable}"
+                                        enabled="{viewModel>/palletEnabled}"
+                                        width="12rem"
+                                        submit=".onPalletSubmit" /> 
+                                </HBox>
+							</layout:VerticalLayout>
+
+							<!-- ================================= -->
+							<!-- SOURCE HU SCANNER -->
+							<!-- ================================= -->
+ 
+                            <layout:VerticalLayout visible="{viewModel>/sourceHUEnabled}">
+ 
+                                <Label
+                                    text="{i18n>SourceHUHead}"
+                                    class="sapUiTinyMarginBottom" />
+ 
+                                <ndc:BarcodeScannerButton
+                                    id="btnHUBarcode"
+                                    scanSuccess=".onSourceHUScanSuccess"
+                                    scanFail=".onScanError"
+                                    inputLiveUpdate=".onScanLiveupdate"
+                                    dialogTitle="Scan Source HU"
+									visible="{viewModel>/sourceHUEnabled}"
+                                     />
+ 
+                            </layout:VerticalLayout>
+						</layout:HorizontalLayout>
+					</content>
+				</Panel>
 			</f:DynamicPageHeader>
 		</f:header>
+		
+		<!-- ===================================================== -->
+		<!-- DYNAMIC PRODUCTS TABLE-->
+		<!-- ===================================================== -->
 		<f:content>
 			<t:Table
-                rows="{/ProductCollection}"
+                id="productTable"
+                rows="{viewModel>/ProductCollection}"
                 selectionMode="MultiToggle"
                 rowMode="Auto"
-            >
-				<t:extension>
-					<OverflowToolbar style="Clear">
-						<Title text="{i18n>Products}" />
-					</OverflowToolbar>
-				</t:extension>
+                visible="{viewModel>/tableVisible}">
+				<!-- ============================================= -->
+				<!-- TABLE TOOLBAR -->
+				<!-- ============================================= -->
+ 
+                <t:extension>
+                    <OverflowToolbar style="Clear">
+                        <Title text="{i18n>Products}" />
+                        <ToolbarSpacer />
+
+						<ndc:BarcodeScannerButton
+                            id="btnHUToolbar"
+							scanSuccess=".onSourceHUScanSuccess"
+                            scanFail=".onScanError"
+                            inputLiveUpdate=".onScanLiveupdate"
+                            dialogTitle="Scan Source HU"
+							visible="{viewModel>/sourceHUEnabled}"
+                            />
+                    </OverflowToolbar> 
+                </t:extension>
+
+ 				<!-- ============================================= -->
+				<!-- TABLE COLUMNS -->
+				<!-- ============================================= -->
 				<t:columns>
 					<t:Column width="11rem">
 						<Label text="{i18n>SourceHU}" />
 						<t:template>
 							<Text
-                                text="{Name}"
+                                text="{viewModel>Sourcehu}"
+                                wrapping="false"
+                            />
+						</t:template>
+					</t:Column>
+					<t:Column width="11rem">
+						<Label text="{i18n>Materials}" />
+						<t:template>
+							<Text
+                                text="{viewModel>Material}"
+                                wrapping="false"
+                            />
+						</t:template>
+					</t:Column>
+					<t:Column width="11rem">
+						<Label text="{i18n>Description}" />
+						<t:template>
+							<Text
+                                text="{viewModel>Itemdesc}"
                                 wrapping="false"
                             />
 						</t:template>
@@ -96,7 +170,7 @@
 						<Label text="{i18n>LiftingTool}" />
 						<t:template>
 							<Text
-                                text="{Name}"
+                                text="{viewModel>Liftingtool}"
                                 wrapping="false"
                             />
 						</t:template>
@@ -107,25 +181,34 @@
                     >
 						<Label text="{i18n>QuantityInPallet}" />
 						<t:template>
-							<Label text="{Quantity}" />
+							<Text
+                                text="{viewModel>QuantityInPal}"
+                                wrapping="false"
+                            />
 						</t:template>
 					</t:Column>
 					<t:Column width="9rem">
 						<Label text="{i18n>QuantityRequired}" />
 						<t:template>
-							<Label text="{Quantity}" />
+							<Text
+                                text="{viewModel>QuantityReq}"
+                                wrapping="false"
+                            />
 						</t:template>
 					</t:Column>
 					<t:Column width="9rem">
 						<Label text="{i18n>QuantityRemaining}" />
 						<t:template>
-							<Label text="{Price}" />
+							<Text
+                                text="{viewModel>QuantityRem}"
+                                wrapping="false"
+                            />
 						</t:template>
 					</t:Column>
 					<t:Column width="12rem">
 						<Label text="{i18n>QuantityLoaded}" />
 						<t:template>
-							<Input value="{ProductId}" />
+							<Input value="{viewModel>QuantityLoaded}" type="Number"/>
 						</t:template>
 					</t:Column>
 					<t:Column width="9rem">
@@ -133,6 +216,7 @@
 						<t:template>
 							<Button
                                 text="Action"
+								type="Emphasized"
                                 press=".handleDetailsPress"
                             />
 						</t:template>
@@ -142,7 +226,7 @@
 						<t:template>
 							<Link
                                 text="Instructions"
-                                href="{ProductPicUrl}"
+                                href="{viewModel>WorkInstruction}"
                                 target="_blank"
                             />
 						</t:template>
