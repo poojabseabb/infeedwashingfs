@@ -8,7 +8,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 Palletnumber: "",
                 palletEnabled: false,
                 palletEditable: false,
-                sourceHUEnabled: false,
+                sourceHUVisible: false,
                 tableVisible: true, // change to false when data is there
                 ProductCollection: []
             });
@@ -91,13 +91,13 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                     /*
                     * No Work Center returned
                     */
-                    if (!oData || !oData.results || oData.results.length === 0) {
+                    if (!oData) {
                         MessageToast.show("Work Center is not valid.");
                         oViewModel.setProperty("/sourceHUVisible", false);
                         return;
                     }
 
-                    var oResult = oData.results[0];
+                    var oResult = oData;
                     var sPallet = oResult.Palletnumber || "";
                     var sWarehouse = oResult.WarehouseNumber || "";
 
@@ -204,7 +204,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             oModel.read("/SourceHuSet?(Sourcehu='" + sSourceHU + "', Workcenter='" + sWorkCenter + "')", {
                 // filters: aFilters,
                 success: function (oData) {
-                    if (!oData || !oData.results || oData.results.length === 0) {
+                    if (!oData) {
                         MessageToast.show("Source HU not found.");
                         return;
                     }

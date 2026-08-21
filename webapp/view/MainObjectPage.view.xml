@@ -83,7 +83,7 @@
 							<!-- SOURCE HU SCANNER -->
 							<!-- ================================= -->
  
-                            <layout:VerticalLayout visible="{viewModel>/sourceHUEnabled}">
+                            <layout:VerticalLayout visible="{viewModel>/sourceHUVisible}">
  
                                 <Label
                                     text="{i18n>SourceHUHead}"
@@ -95,7 +95,7 @@
                                     scanFail=".onScanError"
                                     inputLiveUpdate=".onScanLiveupdate"
                                     dialogTitle="Scan Source HU"
-									visible="{viewModel>/sourceHUEnabled}"
+									visible="{viewModel>/sourceHUVisible}"
                                      />
  
                             </layout:VerticalLayout>
@@ -130,7 +130,7 @@
                             scanFail=".onScanError"
                             inputLiveUpdate=".onScanLiveupdate"
                             dialogTitle="Scan Source HU"
-							visible="{viewModel>/sourceHUEnabled}"
+							visible="{viewModel>/sourceHUVisible}"
                             />
                     </OverflowToolbar> 
                 </t:extension>
