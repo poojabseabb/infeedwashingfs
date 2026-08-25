@@ -215,9 +215,11 @@
 						<Label text="{i18n>ConfirmDelivery}" />
 						<t:template>
 							<Button
-                                text="Action"
+                                text="{i18n>ConfirmDelivery}"
 								type="Emphasized"
                                 press=".handleDetailsPress"
+								visible="{viewModel>ConfirmVisible}"
+								enabled="{viewModel>ConfirmEnabled}"
                             />
 						</t:template>
 					</t:Column>

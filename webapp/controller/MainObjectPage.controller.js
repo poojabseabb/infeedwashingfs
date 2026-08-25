@@ -10,6 +10,8 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 palletEditable: false,
                 sourceHUVisible: false,
                 tableVisible: true, // change to false when data is there
+                ConfirmEnabled: true,
+                ConfirmVisible: true,
                 ProductCollection: []
             });
             this.getView().setModel(oViewModel, "viewModel");
@@ -31,6 +33,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             sWorkCenter = sWorkCenter.trim();
             this._processWorkCenter(sWorkCenter);
             oViewModel.setProperty("/workCenter", sWorkCenter);
+            this.byId("txtWCScannerResult").setText(sWorkCenter);
             this._getWorkCenterDetails(sWorkCenter);
         },
         /* ===================================================== */
@@ -52,6 +55,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             }
             var oViewModel = this.getView().getModel("viewModel");
             oViewModel.setProperty("/workCenter", sWorkCenter);
+            this.byId("txtWCScannerResult").setText(sWorkCenter);
             /*
              * Reset pallet/table state whenever a new
              * Work Center is scanned.
@@ -137,6 +141,173 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                     MessageToast.show("Error while validating Work Center.");
                 }.bind(this)
             });
+        },
+        /* ===================================================== */
+        /* REPACK SOURCE HU -> WASHING TRAY                     */
+        /* ===================================================== */
+        _repackSourceHU: function (oRow) {
+            var oModel = this.getView().getModel();
+            return new Promise(function (resolve, reject) {
+                var oPayload = {
+                    /*
+                    * Replace these with the exact fields from your
+                    * API metadata.-- API Data still pending confirmation
+                    */
+                    SourceHandlingUnit: oRow.SourceHU,
+                    DestinationHandlingUnit: this.getView().getModel("viewModel").getProperty("/Palletnumber"),
+                    Material: oRow.Material,
+                    Quantity: Number(oRow.QuantityLoaded)
+                    // QuantityUnit: oRow.QuantityUnit
+                    // ProductUUID: oRow.ProductUUID
+                    // etc.
+                };
+                oModel.callFunction("/RepackProductsIntoHandlingUnits", {
+                    method: "POST",
+                    urlParameters: oPayload,
+                    success: function (oData) {
+                        console.log("RepackProductsIntoHandlingUnits success:", oData);
+                        resolve(oData);
+                    }.bind(this),
+                    error: function (oError) {
+                        console.error("RepackProductsIntoHandlingUnits error:", oError);
+                        reject(oError);
+                    }.bind(this)
+                });
+            }.bind(this));
+        },
+        /* ===================================================== */
+        /* CREATE WT FOR REMAINING SOURCE HU -> WISW            */
+        /* ===================================================== */
+        _createWTToWISW: function (oRow, iRemaining) {
+            var oModel = this.getView().getModel();
+            return new Promise(function (resolve, reject) {
+                var oPayload = {
+                    /*
+                    * -- API Data still pending confirmation
+                    */
+                    WarehouseNumber: this.getView().getModel("viewModel").getProperty("/warehouseNumber"),
+                    WarehouseTaskType: "",
+                    SourceHandlingUnit: oRow.SourceHU,
+                    Product: oRow.Material,
+                    Quantity: Number(iRemaining),
+                    DestinationStorageType: "WISW"
+                    // DestinationStorageBin: ...
+                    // SourceStorageType: ...
+                    // SourceStorageBin: ...
+                };
+
+                oModel.create("/WarehouseTask", oPayload, {
+                    success: function (oData) {
+                        console.log("Warehouse Task to WISW created:", oData);
+                        resolve(oData);
+                    }.bind(this),
+                    error: function (oError) {
+                        console.error("Warehouse Task creation error:", oError);
+                        reject(oError);
+                    }.bind(this)
+                });
+            }.bind(this));
+        },
+        /* ===================================================== */
+        /* CHECK WHETHER THIS IS THE LAST SCANNED HU            */
+        /* ===================================================== */
+        _isLastHU: function (oRow) {
+            var oViewModel = this.getView().getModel("viewModel");
+            var aProducts = oViewModel.getProperty("/ProductCollection") || [];
+            var aRemainingRows = aProducts.filter(function (oProduct) {
+                /*
+                * Ignore the current row.
+                */
+                if (oProduct.SourceHU === oRow.SourceHU) {
+                    return false;
+                }
+                return oProduct.ConfirmVisible !== false;
+            });
+            return aRemainingRows.length === 0;
+        },
+        /* ===================================================== */
+        /* CREATE WASHING TRAY -> WASHING OUTFEED WT            */
+        /* ===================================================== */
+        _createWashingOutfeedWT: function () {
+            var oModel = this.getView().getModel();
+            var oViewModel = this.getView().getModel("viewModel");
+            var sWarehouse = oViewModel.getProperty("/warehouseNumber");
+            var sWashingTray = oViewModel.getProperty("/Palletnumber");
+            return new Promise(function (resolve, reject) {
+                var oPayload = {
+                    WarehouseNumber: sWarehouse,
+                    HandlingUnit: sWashingTray
+                    /*
+                    * Add the exact destination/process fields
+                    * required by your EWM WarehouseTask API.-- API Data still pending confirmation
+                    */
+                };
+                oModel.create("/WarehouseTask", oPayload, {
+                    success: function (oData) {
+                        console.log("Washing Outfeed Warehouse Task created:", oData);
+                        resolve(oData);
+                    }.bind(this),
+                    error: function (oError) {
+                        console.error("Washing Outfeed WT creation error:", oError);
+                        reject(oError);
+                    }.bind(this)
+                });
+            }.bind(this));
+        },
+        /* ===================================================== */
+        /* CONFIRM FIRST WAREHOUSE TASK TOWARDS WASHING         */
+        /* ===================================================== */
+        _confirmWashingTask: function (oWT) {
+            var oModel = this.getView().getModel();
+            return new Promise(function (resolve, reject) {
+                var oPayload = {
+                    /*
+                    * Replace these with the exact parameters
+                    * from the API metadata.-- API Data still pending confirmation
+                    */
+                    WarehouseTask: oWT.WarehouseTask,
+                    Quantity: oWT.Quantity
+                    // WarehouseNumber: ...
+                    // WarehouseTaskItem: ...
+                    // Product: ...
+                    // Unit: ...
+                };
+                oModel.callFunction("/ConfirmWarehouseTaskProduct", {
+                    method: "POST",
+                    urlParameters: oPayload,
+                    success: function (oData) {
+                        console.log("Washing Warehouse Task confirmed:", oData);
+                        resolve(oData);
+                    }.bind(this),
+                    error: function (oError) {
+                        console.error("Warehouse Task confirmation error:", oError);
+                        reject(oError);
+                    }.bind(this)
+                });
+            }.bind(this));
+        },
+        /* ===================================================== */
+        /* ERROR MESSAGE HELPER                                 */
+        /* ===================================================== */
+        _getErrorMessage: function (oError) {
+
+            if (!oError) {
+                return "An unknown error occurred.";
+            }
+            try {
+                if (oError.responseText) {
+                    var oResponse = JSON.parse(oError.responseText);
+                    if (oResponse.error && oResponse.error.message && oResponse.error.message.value) {
+                        return oResponse.error.message.value;
+                    }
+                }
+            } catch (e) {
+                console.error("Could not parse SAP error:", e);
+            }
+            if (oError.message) {
+                return oError.message;
+            }
+            return "An error occurred while processing the delivery.";
         },
         /* ===================================================== */
         /* MANUAL PALLET ENTRY                                   */
@@ -244,7 +415,6 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             oViewModel.setProperty("/tableVisible", true);
             MessageToast.show("Source HU added.");
         },
-
         /* ===================================================== */
         /* SCANNER ERROR                                         */
         /* ===================================================== */
@@ -262,16 +432,45 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
         /* ===================================================== */
         /* CONFIRM DELIVERY                                      */
         /* ===================================================== */
-        handleDetailsPress: function (oEvent) {
-
-            var oButton = oEvent.getSource();
-            var oContext = oButton.getBindingContext("viewModel");
+        handleDetailsPress: async function (oEvent) {
+            const oButton = oEvent.getSource();
+            const oContext = oButton.getBindingContext("viewModel");
             if (!oContext) {
+                MessageToast.show("Unable to determine selected HU.");
                 return;
             }
-            var oRow = oContext.getObject();
-            console.log("Selected row:", oRow);
-
+            const oRow = oContext.getObject();
+            oButton.setBusy(true);
+            oRow.ConfirmEnabled = false;
+            try {
+                // 1. Repack source HU → washing tray
+                await this._repackSourceHU(oRow);
+                // 2. Calculate remaining quantity
+                const iRemaining = Number(oRow.QuantityInPallet) - Number(oRow.QuantityLoaded);
+                // 3. If something remains → WT to WISW
+                if (iRemaining > 0) {
+                    await this._createWTToWISW(oRow, iRemaining);
+                }
+                // 4. Disable/hide confirmation for this row
+                oRow.ConfirmVisible = false;
+                oRow.ConfirmEnabled = false;
+                oContext.getModel().updateBindings(true);
+                // 5. If this is the final HU
+                if (this._isLastHU(oRow)) {
+                    // Create washing tray → washing outfeed WT
+                    const oWT = await this._createWashingOutfeedWT();
+                    // Confirm first WT towards washing
+                    await this._confirmWashingTask(oWT);
+                }
+                MessageToast.show("Delivery confirmed successfully.");
+            } catch (oError) {
+                console.error(oError);
+                oRow.ConfirmEnabled = true;
+                oContext.getModel().updateBindings(true);
+                MessageToast.show(this._getErrorMessage(oError));
+            } finally {
+                oButton.setBusy(false);
+            }
         }
     });
 });
