@@ -372,7 +372,8 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 new Filter("Workcenter", FilterOperator.EQ, sWorkCenter),
                 new Filter("Palletnumber", FilterOperator.EQ, sPallet)
             ];
-            oModel.read("/SourceHuSet?(Sourcehu='" + sSourceHU + "', Workcenter='" + sWorkCenter + "')", {
+            oModel.read("/SourceHuSet(Sourcehu='" + sSourceHU + "', Workcenter='" + sWorkCenter + "')", {
+                // oModel.read("/SourceHuSet(Sourcehu='900001005',Workcenter='WSHI')", {
                 // filters: aFilters,
                 success: function (oData) {
                     if (!oData) {
@@ -413,7 +414,11 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             });
             oViewModel.setProperty("/ProductCollection", aProducts);
             oViewModel.setProperty("/tableVisible", true);
-            MessageToast.show("Source HU added.");
+            if (aProducts.length > 0) {
+                MessageToast.show("Product added.");
+            } else {
+                MessageToast.show("No Product found for the Source HU.");
+            }
         },
         /* ===================================================== */
         /* SCANNER ERROR                                         */

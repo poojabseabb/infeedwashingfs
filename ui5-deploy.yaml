@@ -21,7 +21,7 @@ builder:
           name: ZINFEEDWASHINGF
           description: Washing Infeed Station New Freestyle
           package: ZEWM_FIORI_PKG
-          transport: DS4K901981
+          transport: DS4K902030
         exclude:
           - /test/
           - /localService/
