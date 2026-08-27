@@ -1,4 +1,4 @@
-sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "sap/m/MessageToast", "sap/ui/core/Fragment", "sap/ui/model/Filter", "sap/ui/model/FilterOperator"], (jQuery, Controller, JSONModel, MessageToast, Fragment, Filter, FilterOperator) => {
+sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "sap/m/MessageToast", "sap/ui/core/Fragment", "sap/ui/model/Filter", "sap/ui/model/FilterOperator", "sap/ui/model/odata/v4/ODataModel"], (jQuery, Controller, JSONModel, MessageToast, Fragment, Filter, FilterOperator, ODataModel) => {
     "use strict";
     let oComponent, oModel;
     return Controller.extend("com.ewm.infeedwashingfs.controller.MainObjectPage", {
@@ -15,6 +15,26 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 ProductCollection: []
             });
             this.getView().setModel(oViewModel, "viewModel");
+
+            // =====================================================
+            // STANDARD SAP ODATA V4 MODELS FOR ACTIONS
+            // =====================================================
+            // Handling Unit API
+            var oHandlingUnitModel = new ODataModel({
+                serviceUrl: "/sap/opu/odata4/sap/api_handlingunit/srvd_a2x/sap/handlingunit/0001/",
+                synchronizationMode: "None",
+                operationMode: "Server",
+                groupId: "$direct"
+            });
+            this.getView().setModel(oHandlingUnitModel, "handlingUnitV4");
+            // Warehouse Order Task API
+            var oWarehouseTaskModel = new ODataModel({
+                serviceUrl: "/sap/opu/odata4/sap/api_warehouse_order_task_2/srvd_a2x/sap/warehouseorder/0001/",
+                synchronizationMode: "None",
+                operationMode: "Server",
+                groupId: "$direct"
+            });
+            this.getView().setModel(oWarehouseTaskModel, "warehouseTaskV4");
         },
         /* ===================================================== */
         /* WORK CENTER SCANNING                                  */
@@ -145,35 +165,66 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
         /* ===================================================== */
         /* REPACK SOURCE HU -> WASHING TRAY                     */
         /* ===================================================== */
-        _repackSourceHU: function (oRow) {
-            var oModel = this.getView().getModel();
-            return new Promise(function (resolve, reject) {
-                var oPayload = {
-                    /*
-                    * Replace these with the exact fields from your
-                    * API metadata.-- API Data still pending confirmation
-                    */
-                    SourceHandlingUnit: oRow.SourceHU,
-                    DestinationHandlingUnit: this.getView().getModel("viewModel").getProperty("/Palletnumber"),
-                    Material: oRow.Material,
-                    Quantity: Number(oRow.QuantityLoaded)
-                    // QuantityUnit: oRow.QuantityUnit
-                    // ProductUUID: oRow.ProductUUID
-                    // etc.
-                };
-                oModel.callFunction("/RepackProductsIntoHandlingUnits", {
-                    method: "POST",
-                    urlParameters: oPayload,
-                    success: function (oData) {
-                        console.log("RepackProductsIntoHandlingUnits success:", oData);
-                        resolve(oData);
-                    }.bind(this),
-                    error: function (oError) {
-                        console.error("RepackProductsIntoHandlingUnits error:", oError);
-                        reject(oError);
-                    }.bind(this)
-                });
-            }.bind(this));
+        _repackSourceHU: async function (oRow) {
+            var oViewModel = this.getView().getModel("viewModel");
+            var oHandlingUnitModel = this.getView().getModel("handlingUnitV4");
+            if (!oHandlingUnitModel) {
+                throw new Error("Handling Unit OData V4 model is not available.");
+            }
+            var sWorkCenter = oViewModel.getProperty("/workCenter");
+            var sWashingTray = oViewModel.getProperty("/Palletnumber");
+            var sWarehouse = oViewModel.getProperty("/warehouseNumber");
+            // -------------------------------------------------
+            // Values from selected table row
+            // -------------------------------------------------
+            var sSourceHU = oRow.SourceHU;
+            var sStockItemUUID = oRow.StockItemUUID;
+            var fQuantity = Number(oRow.QuantityLoaded);
+            if (!sSourceHU) {
+                throw new Error("Source HU is missing.");
+            }
+            if (!sWarehouse) {
+                throw new Error("Warehouse number is missing.");
+            }
+            if (!sStockItemUUID) {
+                throw new Error("StockItemUUID is missing for Source HU " + sSourceHU + ". The SourceHuSet must return StockItemUUID.");
+            }
+            if (!sWashingTray) {
+                throw new Error("Washing tray / pallet number is missing.");
+            }
+            if (!sWorkCenter) {
+                throw new Error("Work Center is missing.");
+            }
+            if (!fQuantity || fQuantity <= 0) {
+                throw new Error("Quantity to pack must be greater than zero.");
+            }
+
+            var sUoM = oRow.QuantityUnit || oRow.UoM || "";
+            if (!sUoM) {
+                throw new Error("Quantity unit is missing for Source HU " + sSourceHU);
+            }
+
+            var sItemPath = "/HandlingUnitItem(" + "HandlingUnitExternalID='" + encodeURIComponent(sSourceHU) + "'," + "Warehouse='" + encodeURIComponent(sWarehouse) + "'," + "StockItemUUID=guid'" + sStockItemUUID + "'" + ")";
+            // -------------------------------------------------
+            // Create bound action
+            // -------------------------------------------------
+            var oActionBinding = oHandlingUnitModel.bindContext(sItemPath + "/SAP__self.RepackHandlingUnitItem(...)");
+            oActionBinding.setParameter("ParentHandlingUnitNumber", sWashingTray);
+            oActionBinding.setParameter("HandlingUnitQuantity", fQuantity);
+            oActionBinding.setParameter("HandlingUnitQuantityUnit", sUoM);
+            oActionBinding.setParameter("UnitOfMeasureSAPCode", oRow.UnitOfMeasureSAPCode || sUoM);
+            oActionBinding.setParameter("UnitOfMeasureISOCode", oRow.UnitOfMeasureISOCode || "");
+            oActionBinding.setParameter("EWMWorkCenter", sWorkCenter);
+            oActionBinding.setParameter("_SerialNumber", []);
+
+            try {
+                await oActionBinding.execute();
+                MessageToast.show("Source HU " + sSourceHU + " packed on washing tray.");
+                return true;
+            } catch (oError) {
+                console.error("RepackHandlingUnitItem failed:", oError);
+                throw oError;
+            }
         },
         /* ===================================================== */
         /* CREATE WT FOR REMAINING SOURCE HU -> WISW            */
@@ -257,34 +308,34 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
         /* ===================================================== */
         /* CONFIRM FIRST WAREHOUSE TASK TOWARDS WASHING         */
         /* ===================================================== */
-        _confirmWashingTask: function (oWT) {
-            var oModel = this.getView().getModel();
-            return new Promise(function (resolve, reject) {
-                var oPayload = {
-                    /*
-                    * Replace these with the exact parameters
-                    * from the API metadata.-- API Data still pending confirmation
-                    */
-                    WarehouseTask: oWT.WarehouseTask,
-                    Quantity: oWT.Quantity
-                    // WarehouseNumber: ...
-                    // WarehouseTaskItem: ...
-                    // Product: ...
-                    // Unit: ...
-                };
-                oModel.callFunction("/ConfirmWarehouseTaskProduct", {
-                    method: "POST",
-                    urlParameters: oPayload,
-                    success: function (oData) {
-                        console.log("Washing Warehouse Task confirmed:", oData);
-                        resolve(oData);
-                    }.bind(this),
-                    error: function (oError) {
-                        console.error("Warehouse Task confirmation error:", oError);
-                        reject(oError);
-                    }.bind(this)
-                });
-            }.bind(this));
+        _confirmWashingTask: async function (oWT) {
+            var oWarehouseTaskModel = this.getView().getModel("warehouseTaskV4");
+            if (!oWarehouseTaskModel) {
+                throw new Error("Warehouse Task OData V4 model is not available.");
+            }
+            if (!oWT) {
+                throw new Error("Warehouse Task information is missing.");
+            }
+
+            var sWarehouse = oWT.EWMWarehouse;
+            var sWarehouseTask = oWT.WarehouseTask;
+            var sWarehouseTaskItem = oWT.WarehouseTaskItem;
+            if (!sWarehouse || !sWarehouseTask || !sWarehouseTaskItem) {
+                throw new Error("Incomplete Warehouse Task key information.");
+            }
+            var sTaskPath = "/WarehouseTask(" + "EWMWarehouse='" + encodeURIComponent(sWarehouse) + "'," + "WarehouseTask='" + encodeURIComponent(sWarehouseTask) + "'," + "WarehouseTaskItem='" + encodeURIComponent(sWarehouseTaskItem) + "'" + ")";
+            // -------------------------------------------------
+            // Bind ConfirmWarehouseTaskExact action
+            // -------------------------------------------------
+            var oActionBinding = oWarehouseTaskModel.bindContext(sTaskPath + "/SAP__self.ConfirmWarehouseTaskExact(...)");
+            try {
+                await oActionBinding.execute();
+                MessageToast.show("Warehouse Task " + sWarehouseTask + " confirmed.");
+                return true;
+            } catch (oError) {
+                console.error("ConfirmWarehouseTaskExact failed:", oError);
+                throw oError;
+            }
         },
         /* ===================================================== */
         /* ERROR MESSAGE HELPER                                 */
@@ -372,7 +423,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 new Filter("Workcenter", FilterOperator.EQ, sWorkCenter),
                 new Filter("Palletnumber", FilterOperator.EQ, sPallet)
             ];
-            oModel.read("/SourceHuSet(Sourcehu='" + sSourceHU + "', Workcenter='" + sWorkCenter + "')", {
+            oModel.read("/SourceHuSet(Sourcehu='" + sSourceHU + "',Workcenter='" + sWorkCenter + "')", {
                 // oModel.read("/SourceHuSet(Sourcehu='900001005',Workcenter='WSHI')", {
                 // filters: aFilters,
                 success: function (oData) {
@@ -408,7 +459,12 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                     QuantityLoadedEditable: true,
                     ConfirmEnabled: true,
                     ConfirmVisible: true,
-                    WorkInstruction: oHU.WorkInstruction
+                    WorkInstruction: oHU.WorkInstruction,
+
+                    // StockItemUUID: oHU.StockItemUUID,
+                    // QuantityUnit: oHU.QuantityUnit,
+                    // UnitOfMeasureSAPCode: oHU.UnitOfMeasureSAPCode,
+                    // UnitOfMeasureISOCode: oHU.UnitOfMeasureISOCode,
                 };
                 aProducts.push(oRow);
             });
@@ -469,7 +525,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 }
                 MessageToast.show("Delivery confirmed successfully.");
             } catch (oError) {
-                console.error(oError);
+                console.error("Confirm delivery failed:", oError);
                 oRow.ConfirmEnabled = true;
                 oContext.getModel().updateBindings(true);
                 MessageToast.show(this._getErrorMessage(oError));
