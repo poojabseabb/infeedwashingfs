@@ -431,7 +431,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                         MessageToast.show("Source HU not found.");
                         return;
                     }
-                    this._appendSourceHUData(oData.results);
+                    this._appendSourceHUData(oData);
                 }.bind(this),
                 error: function (oError) {
                     console.error("SourceHuSet error:", oError);
