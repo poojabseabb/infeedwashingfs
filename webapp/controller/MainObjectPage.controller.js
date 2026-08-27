@@ -442,11 +442,14 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
         /* ===================================================== */
         /* APPEND SOURCE HU TO TABLE                             */
         /* ===================================================== */
-        _appendSourceHUData: function (aResults) {
+        _appendSourceHUData: function (oData) {
             var oViewModel = this.getView().getModel("viewModel");
             var aProducts = oViewModel.getProperty("/ProductCollection") || [];
+            var aResults = Array.isArray(oData) ? oData : [oData];
+            console.log("Source HU result count:", aResults.length);
+            console.log("Source HU results:", aResults);
             aResults.forEach(function (oHU) {
-
+                console.log("Processing Source HU:", oHU);
                 var oRow = {
                     SourceHU: oHU.Sourcehu,
                     Material: oHU.Material,
@@ -466,6 +469,8 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                     // UnitOfMeasureSAPCode: oHU.UnitOfMeasureSAPCode,
                     // UnitOfMeasureISOCode: oHU.UnitOfMeasureISOCode,
                 };
+
+                console.log("Row added to ProductCollection:", oRow);
                 aProducts.push(oRow);
             });
             oViewModel.setProperty("/ProductCollection", aProducts);
