@@ -34,9 +34,9 @@
                     >
 					<content>
 						<layout:HorizontalLayout allowWrapping="true">
-						<!-- ===================================================== -->
-						<!-- HEADER INFO -->
-						<!-- ===================================================== -->
+							<!-- ===================================================== -->
+							<!-- HEADER INFO -->
+							<!-- ===================================================== -->
 							<layout:VerticalLayout
                                         class="sapUiMediumMarginEnd"
                                     >
@@ -44,52 +44,48 @@
 								<HBox
                                     alignItems="Center"
                                     class="sapUiTinyMarginBottom">
- 
-                                    <ObjectAttribute
+									<ObjectAttribute
                                         id="txtWCScannerResult"
                                         title="{i18n>WorkCenter}"
                                         text="{viewModel>/Workcenter}"
                                         class="sapUiTinyMarginEnd" 
 										/>
- 
-                                    <ndc:BarcodeScannerButton
+									<ndc:BarcodeScannerButton
                                         id="btnWCBarcode"
                                         scanSuccess=".onWorkCenterScanSuccess"
                                         scanFail=".onScanError"
                                         inputLiveUpdate=".onWorkCenterLiveUpdate"
                                         dialogTitle="Scan Work Center" />
-                                </HBox>
-
+								</HBox>
 								<!-- Pallet Number -->
-                                <HBox
+								<HBox
                                     alignItems="Center"
                                     class="sapUiTinyMarginBottom">
- 
-                                    <Label
+									<Label
                                         text="{i18n>PalletNumber}"
                                         width="5rem" />
- 
-                                    <Input
+									<Input
                                         id="palletInput"
                                         value="{viewModel>/Palletnumber}"
                                         editable="{viewModel>/palletEditable}"
                                         enabled="{viewModel>/palletEnabled}"
                                         width="12rem"
-                                        submit=".onPalletSubmit" /> 
-                                </HBox>
+                                        submit=".onPalletSubmit" />
+								</HBox>
 							</layout:VerticalLayout>
-
 							<!-- ================================= -->
 							<!-- SOURCE HU SCANNER -->
 							<!-- ================================= -->
- 
-                            <layout:VerticalLayout visible="{viewModel>/sourceHUVisible}">
- 
-                                <Label
-                                    text="{i18n>SourceHUHead}"
-                                    class="sapUiTinyMarginBottom" />
- 
-                                <ndc:BarcodeScannerButton
+							<layout:HorizontalLayout visible="{viewModel>/sourceHUVisible}">
+								<HBox alignItems="Center"
+                                    class="sapUiTinyMarginBottom">
+									<ObjectAttribute
+                                        id="txtSHUScannerResult"
+                                        title="{i18n>SourceHUHead}"
+                                        text="{viewModel>/Sourcehu}"
+                                        class="sapUiTinyMarginEnd" 
+										/>
+									<ndc:BarcodeScannerButton
                                     id="btnHUBarcode"
                                     scanSuccess=".onSourceHUScanSuccess"
                                     scanFail=".onScanError"
@@ -97,14 +93,13 @@
                                     dialogTitle="Scan Source HU"
 									visible="{viewModel>/sourceHUVisible}"
                                      />
- 
-                            </layout:VerticalLayout>
+								</HBox>
+							</layout:HorizontalLayout>
 						</layout:HorizontalLayout>
 					</content>
 				</Panel>
 			</f:DynamicPageHeader>
 		</f:header>
-		
 		<!-- ===================================================== -->
 		<!-- DYNAMIC PRODUCTS TABLE-->
 		<!-- ===================================================== -->
@@ -118,12 +113,10 @@
 				<!-- ============================================= -->
 				<!-- TABLE TOOLBAR -->
 				<!-- ============================================= -->
- 
-                <t:extension>
-                    <OverflowToolbar style="Clear">
-                        <Title text="{i18n>Products}" />
-                        <ToolbarSpacer />
-
+				<t:extension>
+					<OverflowToolbar style="Clear">
+						<Title text="{i18n>Products}" />
+						<ToolbarSpacer />
 						<ndc:BarcodeScannerButton
                             id="btnHUToolbar"
 							scanSuccess=".onSourceHUScanSuccess"
@@ -132,10 +125,9 @@
                             dialogTitle="Scan Source HU"
 							visible="{viewModel>/sourceHUVisible}"
                             />
-                    </OverflowToolbar> 
-                </t:extension>
-
- 				<!-- ============================================= -->
+					</OverflowToolbar>
+				</t:extension>
+				<!-- ============================================= -->
 				<!-- TABLE COLUMNS -->
 				<!-- ============================================= -->
 				<t:columns>

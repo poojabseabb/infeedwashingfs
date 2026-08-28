@@ -165,66 +165,65 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
         /* ===================================================== */
         /* REPACK SOURCE HU -> WASHING TRAY                     */
         /* ===================================================== */
-        _repackSourceHU: async function (oRow) {
-            var oViewModel = this.getView().getModel("viewModel");
-            var oHandlingUnitModel = this.getView().getModel("handlingUnitV4");
-            if (!oHandlingUnitModel) {
-                throw new Error("Handling Unit OData V4 model is not available.");
-            }
-            var sWorkCenter = oViewModel.getProperty("/workCenter");
-            var sWashingTray = oViewModel.getProperty("/Palletnumber");
-            var sWarehouse = oViewModel.getProperty("/warehouseNumber");
-            // -------------------------------------------------
-            // Values from selected table row
-            // -------------------------------------------------
-            var sSourceHU = oRow.SourceHU;
-            var sStockItemUUID = oRow.StockItemUUID;
-            var fQuantity = Number(oRow.QuantityLoaded);
-            if (!sSourceHU) {
-                throw new Error("Source HU is missing.");
-            }
-            if (!sWarehouse) {
-                throw new Error("Warehouse number is missing.");
-            }
-            if (!sStockItemUUID) {
-                throw new Error("StockItemUUID is missing for Source HU " + sSourceHU + ". The SourceHuSet must return StockItemUUID.");
-            }
-            if (!sWashingTray) {
-                throw new Error("Washing tray / pallet number is missing.");
-            }
-            if (!sWorkCenter) {
-                throw new Error("Work Center is missing.");
-            }
-            if (!fQuantity || fQuantity <= 0) {
-                throw new Error("Quantity to pack must be greater than zero.");
-            }
+        /* =====================================================*/
+        _repackSourceHU: function (oRow) {
+            return new Promise(function (resolve, reject) {
+                var oModel = this.getView().getModel();
+                if (!oModel) {
+                    reject(new Error("OData model is not available."));
+                    return;
+                }
+                var oViewModel = this.getView().getModel("viewModel");
+                var sSourceHU = oRow.SourceHU;
+                var sPallet = oViewModel.getProperty("/Palletnumber");
+                var sWarehouse = oViewModel.getProperty("/warehouseNumber");
+                var sWorkCenter = oViewModel.getProperty("/workCenter");
+                if (!sSourceHU) {
+                    reject(new Error("Source HU is missing."));
+                    return;
+                }
+                if (!sPallet) {
+                    reject(new Error("Pallet / destination HU is missing."));
+                    return;
+                }
+                if (!sWarehouse) {
+                    reject(new Error("Warehouse number is missing."));
+                    return;
+                }
+                if (!sWorkCenter) {
+                    reject(new Error("Work Center is missing."));
+                    return;
+                }
 
-            var sUoM = oRow.QuantityUnit || oRow.UoM || "";
-            if (!sUoM) {
-                throw new Error("Quantity unit is missing for Source HU " + sSourceHU);
-            }
+                var sUrl = "/sap/opu/odata4/sap/api_handlingunit/srvd_a2x/sap/handlingunit/0001/" + "HandlingUnit(" + "HandlingUnitExternalID='" + encodeURIComponent(sSourceHU) + "'," + "Warehouse='" + encodeURIComponent(sWarehouse) + "'" + ")" + "/SAP__self.RepackHandlingUnitHeader";
 
-            var sItemPath = "/HandlingUnitItem(" + "HandlingUnitExternalID='" + encodeURIComponent(sSourceHU) + "'," + "Warehouse='" + encodeURIComponent(sWarehouse) + "'," + "StockItemUUID=guid'" + sStockItemUUID + "'" + ")";
-            // -------------------------------------------------
-            // Create bound action
-            // -------------------------------------------------
-            var oActionBinding = oHandlingUnitModel.bindContext(sItemPath + "/SAP__self.RepackHandlingUnitItem(...)");
-            oActionBinding.setParameter("ParentHandlingUnitNumber", sWashingTray);
-            oActionBinding.setParameter("HandlingUnitQuantity", fQuantity);
-            oActionBinding.setParameter("HandlingUnitQuantityUnit", sUoM);
-            oActionBinding.setParameter("UnitOfMeasureSAPCode", oRow.UnitOfMeasureSAPCode || sUoM);
-            oActionBinding.setParameter("UnitOfMeasureISOCode", oRow.UnitOfMeasureISOCode || "");
-            oActionBinding.setParameter("EWMWorkCenter", sWorkCenter);
-            oActionBinding.setParameter("_SerialNumber", []);
+                var oPayload = {
+                    ParentHandlingUnitNumber: sPallet,
+                    EWMWorkCenter: sWorkCenter
+                };
+                console.log("Repack Source HU");
+                console.log("URL:", sUrl);
+                console.log("Payload:", oPayload);
 
-            try {
-                await oActionBinding.execute();
-                MessageToast.show("Source HU " + sSourceHU + " packed on washing tray.");
-                return true;
-            } catch (oError) {
-                console.error("RepackHandlingUnitItem failed:", oError);
-                throw oError;
-            }
+                try {
+                    var oActionContext = oModel.bindContext(sUrl, null);
+                    oActionContext.setParameter("ParentHandlingUnitNumber", sPallet);
+                    oActionContext.setParameter("EWMWorkCenter", sWorkCenter);
+                    /*
+                    * Execute the bound action.
+                    */
+                    oActionContext.execute().then(function () {
+                        MessageToast.show("Source HU " + sSourceHU + " repacked successfully.");
+                        resolve();
+                    }).catch(function (oError) {
+                        console.error("RepackHandlingUnitHeader error:", oError);
+                        reject(oError);
+                    });
+                } catch (oError) {
+                    console.error("Error preparing RepackHandlingUnitHeader:", oError);
+                    reject(oError);
+                }
+            }.bind(this));
         },
         /* ===================================================== */
         /* CREATE WT FOR REMAINING SOURCE HU -> WISW            */
@@ -238,7 +237,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                     */
                     WarehouseNumber: this.getView().getModel("viewModel").getProperty("/warehouseNumber"),
                     WarehouseTaskType: "",
-                    SourceHandlingUnit: oRow.SourceHU,
+                    SourceHandlingUnit: oRow.Sourcehu,
                     Product: oRow.Material,
                     Quantity: Number(iRemaining),
                     DestinationStorageType: "WISW"
@@ -269,7 +268,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 /*
                 * Ignore the current row.
                 */
-                if (oProduct.SourceHU === oRow.SourceHU) {
+                if (oProduct.Sourcehu === oRow.Sourcehu) {
                     return false;
                 }
                 return oProduct.ConfirmVisible !== false;
@@ -396,6 +395,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 return;
             }
             sSourceHU = sSourceHU.trim();
+            this.byId("txtSHUScannerResult").setText(sSourceHU);
             var oViewModel = this.getView().getModel("viewModel");
             var sWorkCenter = oViewModel.getProperty("/workCenter");
             var sPallet = oViewModel.getProperty("/Palletnumber");
@@ -451,7 +451,8 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             aResults.forEach(function (oHU) {
                 console.log("Processing Source HU:", oHU);
                 var oRow = {
-                    SourceHU: oHU.Sourcehu,
+                    Sourcehu: oHU.Sourcehu,
+                    Workcenter: oHU.Workcenter,
                     Material: oHU.Material,
                     Itemdesc: oHU.Itemdesc,
                     Liftingtool: oHU.Liftingtool,
@@ -512,7 +513,8 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 // 1. Repack source HU → washing tray
                 await this._repackSourceHU(oRow);
                 // 2. Calculate remaining quantity
-                const iRemaining = Number(oRow.QuantityInPallet) - Number(oRow.QuantityLoaded);
+                const iRemaining = Number(oRow.QuantityInPal) - Number(oRow.QuantityLoaded);
+                // const iRemaining = Number(oRow.QuantityRem);
                 // 3. If something remains → WT to WISW
                 if (iRemaining > 0) {
                     await this._createWTToWISW(oRow, iRemaining);
