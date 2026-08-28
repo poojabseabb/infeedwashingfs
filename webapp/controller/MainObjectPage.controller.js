@@ -450,6 +450,23 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             console.log("Source HU results:", aResults);
             aResults.forEach(function (oHU) {
                 console.log("Processing Source HU:", oHU);
+                // -------------------------------------------------
+                // DUPLICATE SOURCE HU VALIDATION
+                // -------------------------------------------------
+                var bAlreadyExists = aProducts.some(
+                    function (oExistingRow) {
+                        return String(oExistingRow.Sourcehu).trim() === String(oHU.Sourcehu).trim();
+                    });
+                if (bAlreadyExists) {
+                    MessageToast.show("Source HU " + oHU.Sourcehu + " already exists.");
+                    console.log("Duplicate Source HU - not adding:", oHU.Sourcehu);
+                    this.byId("txtSHUScannerResult").setText("");
+                    return;
+                }
+
+                // -------------------------------------------------
+                // CREATE NEW TABLE ROW ONLY IF NO DUPLICATE EXIST
+                // ------------------------------------------------
                 var oRow = {
                     Sourcehu: oHU.Sourcehu,
                     Workcenter: oHU.Workcenter,
