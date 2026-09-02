@@ -165,142 +165,192 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
         /* ===================================================== */
         /* REPACK SOURCE HU -> WASHING TRAY                     */
         /* ===================================================== */
-        /* =====================================================*/
         _repackSourceHU: function (oRow) {
             return new Promise(function (resolve, reject) {
-                var oModel = this.getView().getModel();
-                if (!oModel) {
-                    reject(new Error("OData model is not available."));
-                    return;
-                }
                 var oViewModel = this.getView().getModel("viewModel");
-                var sSourceHU = oRow.SourceHU;
-                var sPallet = oViewModel.getProperty("/Palletnumber");
-                var sWarehouse = oViewModel.getProperty("/warehouseNumber");
+                /* -------------------------------------------------
+                * 1. Get values from the selected table row
+                * ------------------------------------------------- */
+                var sSourceHU = oRow.Sourcehu;
+                var sDestinationHU = oViewModel.getProperty("/Palletnumber");
                 var sWorkCenter = oViewModel.getProperty("/workCenter");
+                var sWarehouse = oViewModel.getProperty("/warehouseNumber");
                 if (!sSourceHU) {
                     reject(new Error("Source HU is missing."));
                     return;
                 }
-                if (!sPallet) {
-                    reject(new Error("Pallet / destination HU is missing."));
-                    return;
-                }
-                if (!sWarehouse) {
-                    reject(new Error("Warehouse number is missing."));
+                if (!sDestinationHU) {
+                    reject(new Error("Destination HU / Pallet number is missing."));
                     return;
                 }
                 if (!sWorkCenter) {
                     reject(new Error("Work Center is missing."));
                     return;
                 }
-
-                var sUrl = "/sap/opu/odata4/sap/api_handlingunit/srvd_a2x/sap/handlingunit/0001/" + "HandlingUnit(" + "HandlingUnitExternalID='" + encodeURIComponent(sSourceHU) + "'," + "Warehouse='" + encodeURIComponent(sWarehouse) + "'" + ")" + "/SAP__self.RepackHandlingUnitHeader";
-
-                var oPayload = {
-                    ParentHandlingUnitNumber: sPallet,
-                    EWMWorkCenter: sWorkCenter
-                };
-                console.log("Repack Source HU");
-                console.log("URL:", sUrl);
-                console.log("Payload:", oPayload);
-
-                try {
-                    var oActionContext = oModel.bindContext(sUrl, null);
-                    oActionContext.setParameter("ParentHandlingUnitNumber", sPallet);
-                    oActionContext.setParameter("EWMWorkCenter", sWorkCenter);
-                    /*
-                    * Execute the bound action.
-                    */
-                    oActionContext.execute().then(function () {
-                        MessageToast.show("Source HU " + sSourceHU + " repacked successfully.");
-                        resolve();
-                    }).catch(function (oError) {
-                        console.error("RepackHandlingUnitHeader error:", oError);
-                        reject(oError);
-                    });
-                } catch (oError) {
-                    console.error("Error preparing RepackHandlingUnitHeader:", oError);
-                    reject(oError);
+                if (!sWarehouse) {
+                    reject(new Error("Warehouse is missing."));
+                    return;
                 }
-            }.bind(this));
-        },
-        /* ===================================================== */
-        /* CREATE WT FOR REMAINING SOURCE HU -> WISW            */
-        /* ===================================================== */
-        _createWTToWISW: function (oRow, iRemaining) {
-            var oModel = this.getView().getModel();
-            return new Promise(function (resolve, reject) {
-                var oPayload = {
-                    /*
-                    * -- API Data still pending confirmation
-                    */
-                    WarehouseNumber: this.getView().getModel("viewModel").getProperty("/warehouseNumber"),
-                    WarehouseTaskType: "",
-                    SourceHandlingUnit: oRow.Sourcehu,
-                    Product: oRow.Material,
-                    Quantity: Number(iRemaining),
-                    DestinationStorageType: "WISW"
-                    // DestinationStorageBin: ...
-                    // SourceStorageType: ...
-                    // SourceStorageBin: ...
-                };
+                console.log("========== REPACK START ==========");
+                console.log("Source HU       :", sSourceHU);
+                console.log("Destination HU  :", sDestinationHU);
+                console.log("Work Center     :", sWorkCenter);
+                console.log("Warehouse       :", sWarehouse);
+                /* -------------------------------------------------
+                * 3. GET from HandlingUnitItem
+                * - StockItemUUID
+                * - ETag
+                * - X-CSRF-Token
+                * ------------------------------------------------- */
+                var sGetUrl = "/sap/opu/odata4/sap/api_handlingunit/srvd_a2x/" + "sap/handlingunit/0001/" + "HandlingUnit(" + "HandlingUnitExternalID='" + encodeURIComponent(sSourceHU) + "',Warehouse='" + encodeURIComponent(sWarehouse) + "'" + ")/_HandlingUnitItem";
+                console.log("GET HandlingUnitItem URL:", sGetUrl);
+                jQuery.ajax({
+                    url: sGetUrl,
+                    type: "GET",
+                    dataType: "json",
+                    headers: {
+                        "X-CSRF-Token": "Fetch",
+                        "Accept": "application/json"
+                    },
+                    success: function (oData, sStatus, oXHR) {
+                        console.log("HandlingUnitItem GET successful.");
+                        console.log("GET response:", oData);
+                        var sCSRFToken = oXHR.getResponseHeader("X-CSRF-Token");
+                        console.log("CSRF Token:", sCSRFToken);
+                        if (!sCSRFToken) {
+                            reject(new Error("CSRF token was not returned by the Handling Unit API."));
+                            return;
+                        }
 
-                oModel.create("/WarehouseTask", oPayload, {
-                    success: function (oData) {
-                        console.log("Warehouse Task to WISW created:", oData);
-                        resolve(oData);
+                        var aItems = [];
+                        if (oData && Array.isArray(oData.value)) {
+                            aItems = oData.value;
+                        } else if (oData && Array.isArray(oData.results)) {
+                            // Fallback in case the response is OData V2-like
+                            aItems = oData.results;
+                        } else if (oData && oData.StockItemUUID) {
+                            // Fallback if a single object is returned
+                            aItems = [oData];
+                        }
+                        console.log("Handling Unit Item count:", aItems.length);
+                        if (aItems.length === 0) {
+                            reject(new Error("No Handling Unit Item found for Source HU " + sSourceHU));
+                            return;
+                        }
+                        var oItem = aItems[0];
+                        var sStockItemUUID = oItem.StockItemUUID;
+                        if (!sStockItemUUID) {
+                            reject(new Error("StockItemUUID was not returned for Source HU " + sSourceHU));
+                            return;
+                        }
+                        console.log("StockItemUUID:", sStockItemUUID);
+                        /* -------------------------------------------------
+                        * 9. If ETag was not available as HTTP header,
+                        *    try @odata.etag from response body.
+                        * ------------------------------------------------- */
+                        var sETag = oXHR.getResponseHeader("ETag");
+                        console.log("ETag:", sETag);
+                        if (!sETag && oItem["@odata.etag"]) {
+                            sETag = oItem["@odata.etag"];
+                            console.log("ETag obtained from @odata.etag:", sETag);
+                        }
+                        if (!sETag) {
+                            reject(new Error("ETag was not returned by the Handling Unit API."));
+                            return;
+                        }
+                        /* -------------------------------------------------
+                        * 10. Build RepackHandlingUnitItem POST URL
+                        * ------------------------------------------------- */
+                        var sPostUrl = "/sap/opu/odata4/sap/api_handlingunit/srvd_a2x/" + "sap/handlingunit/0001/" + "HandlingUnitItem(" + "HandlingUnitExternalID='" + encodeURIComponent(sSourceHU) + "',Warehouse='" + encodeURIComponent(sWarehouse) + "',StockItemUUID=" + sStockItemUUID + ")" + "/SAP__self.RepackHandlingUnitItem";
+                        console.log("POST RepackHandlingUnitItem URL:", sPostUrl);
+                        /* -------------------------------------------------
+                        * 11. POST payload
+                        * ParentHandlingUnitNumber = washing tray/pallet
+                        * EWMWorkCenter             = work center
+                        * ------------------------------------------------- */
+                        var oPayload = {
+                            ParentHandlingUnitNumber: sDestinationHU,
+                            EWMWorkCenter: sWorkCenter
+                        };
+                        console.log("Repack POST payload:", oPayload);
+                        jQuery.ajax({
+                            url: sPostUrl,
+                            type: "POST",
+                            contentType: "application/json",
+                            dataType: "json",
+                            data: JSON.stringify(oPayload),
+                            headers: {
+                                "X-CSRF-Token": sCSRFToken,
+                                "If-Match": sETag,
+                                "Accept": "application/json"
+                            },
+                            /* -------------------------------------------------
+                            * 13. Repack successful
+                            * ------------------------------------------------- */
+                            success: function (oRepackData) {
+                                console.log("RepackHandlingUnitItem successful.");
+                                console.log("Repack response:", oRepackData);
+                                console.log("========== REPACK SUCCESS ==========");
+                                MessageToast.show("Source HU " + sSourceHU + " repacked successfully.");
+                                resolve(oRepackData);
+                            },
+                            /* -------------------------------------------------
+                            * 14. Repack failed
+                            * ------------------------------------------------- */
+                            error: function (oError) {
+                                console.error("RepackHandlingUnitItem failed:", oError);
+                                console.error("Repack response text:", oError.responseText);
+                                var sErrorMessage = "Repack of Source HU " + sSourceHU + " failed.";
+                                /* ---------------------------------------------
+                                * Try to extract SAP error message
+                                * --------------------------------------------- */
+                                try {
+                                    if (oError.responseJSON && oError.responseJSON.error) {
+                                        var oSAPError = oError.responseJSON.error;
+                                        if (oSAPError.message) {
+                                            if (typeof oSAPError.message === "string") {
+                                                sErrorMessage = oSAPError.message;
+                                            } else if (oSAPError.message.value) {
+                                                sErrorMessage = oSAPError.message.value;
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Unable to parse SAP error:", e);
+                                }
+                                console.error("Repack error message:", sErrorMessage);
+                                /* ---------------------------------------------
+                                * Reject so handleDetailsPress() catches it
+                                * --------------------------------------------- */
+                                var oErrorObject = new Error(sErrorMessage);
+                                oErrorObject.response = oError;
+                                reject(oErrorObject);
+                            }
+                        });
                     }.bind(this),
+                    /* -------------------------------------------------
+                    * 15. GET HandlingUnitItem failed
+                    * ------------------------------------------------- */
                     error: function (oError) {
-                        console.error("Warehouse Task creation error:", oError);
-                        reject(oError);
-                    }.bind(this)
-                });
-            }.bind(this));
-        },
-        /* ===================================================== */
-        /* CHECK WHETHER THIS IS THE LAST SCANNED HU            */
-        /* ===================================================== */
-        _isLastHU: function (oRow) {
-            var oViewModel = this.getView().getModel("viewModel");
-            var aProducts = oViewModel.getProperty("/ProductCollection") || [];
-            var aRemainingRows = aProducts.filter(function (oProduct) {
-                /*
-                * Ignore the current row.
-                */
-                if (oProduct.Sourcehu === oRow.Sourcehu) {
-                    return false;
-                }
-                return oProduct.ConfirmVisible !== false;
-            });
-            return aRemainingRows.length === 0;
-        },
-        /* ===================================================== */
-        /* CREATE WASHING TRAY -> WASHING OUTFEED WT            */
-        /* ===================================================== */
-        _createWashingOutfeedWT: function () {
-            var oModel = this.getView().getModel();
-            var oViewModel = this.getView().getModel("viewModel");
-            var sWarehouse = oViewModel.getProperty("/warehouseNumber");
-            var sWashingTray = oViewModel.getProperty("/Palletnumber");
-            return new Promise(function (resolve, reject) {
-                var oPayload = {
-                    WarehouseNumber: sWarehouse,
-                    HandlingUnit: sWashingTray
-                    /*
-                    * Add the exact destination/process fields
-                    * required by your EWM WarehouseTask API.-- API Data still pending confirmation
-                    */
-                };
-                oModel.create("/WarehouseTask", oPayload, {
-                    success: function (oData) {
-                        console.log("Washing Outfeed Warehouse Task created:", oData);
-                        resolve(oData);
-                    }.bind(this),
-                    error: function (oError) {
-                        console.error("Washing Outfeed WT creation error:", oError);
-                        reject(oError);
-                    }.bind(this)
+                        console.error("HandlingUnitItem GET failed:", oError);
+                        console.error("GET response:", oError.responseText);
+                        var sErrorMessage = "Unable to read Handling Unit Item for Source HU " + sSourceHU;
+                        try {
+                            if (oError.responseJSON && oError.responseJSON.error) {
+                                var oSAPError = oError.responseJSON.error;
+                                if (oSAPError.message) {
+                                    if (typeof oSAPError.message === "string") {
+                                        sErrorMessage = oSAPError.message;
+                                    } else if (oSAPError.message.value) {
+                                        sErrorMessage = oSAPError.message.value;
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Unable to parse GET error:", e);
+                        }
+                        reject(new Error(sErrorMessage));
+                    }
                 });
             }.bind(this));
         },
