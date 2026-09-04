@@ -174,7 +174,7 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                 var sSourceHU = oRow.Sourcehu;
                 var sDestinationHU = oViewModel.getProperty("/Palletnumber");
                 var sWorkCenter = oViewModel.getProperty("/workCenter");
-                var sWarehouse = oViewModel.getProperty("/warehouseNumber");
+                var sWarehouse = "VAST"; // Hardcoded for now, can be dynamic if needed
                 if (!sSourceHU) {
                     reject(new Error("Source HU is missing."));
                     return;
@@ -490,6 +490,16 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             });
         },
         /* ===================================================== */
+        /* BUILD WORK INSTRUCTION URL FROM MATERIAL              */
+        /* ===================================================== */
+        _buildWorkInstructionUrl: function (sMaterial) {
+            if (!sMaterial) {
+                return "";
+            }
+            var sBaseUrl = "https://<server>:<port>/"; // Check with Functional on what will be this data
+            return sBaseUrl + encodeURIComponent(sMaterial) + ".docx";
+        },
+        /* ===================================================== */
         /* APPEND SOURCE HU TO TABLE                             */
         /* ===================================================== */
         _appendSourceHUData: function (oData) {
@@ -530,8 +540,9 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
                     QuantityLoadedEditable: true,
                     ConfirmEnabled: true,
                     ConfirmVisible: true,
-                    WorkInstruction: oHU.WorkInstruction,
+                    WorkInstruction: this._buildWorkInstructionUrl(oHU.Material),
 
+                    // WorkInstruction: oHU.WorkInstruction,
                     // StockItemUUID: oHU.StockItemUUID,
                     // QuantityUnit: oHU.QuantityUnit,
                     // UnitOfMeasureSAPCode: oHU.UnitOfMeasureSAPCode,
@@ -548,6 +559,23 @@ sap.ui.define(["sap/ui/thirdparty/jquery", "sap/ui/core/mvc/Controller", "sap/ui
             } else {
                 MessageToast.show("No Product found for the Source HU.");
             }
+        },
+        /* ===================================================== */
+        /* WORK INSTRUCTION LINK PRESS                            */
+        /* ===================================================== */
+        onWorkInstructionPress: function (oEvent) {
+            var oContext = oEvent.getSource().getBindingContext("viewModel");
+            if (!oContext) {
+                MessageToast.show("Unable to find material information.");
+                return;
+            }
+            var sUrl = oContext.getProperty("WorkInstruction");
+            if (!sUrl) {
+                MessageToast.show("Work instruction is not available.");
+                return;
+            }
+            // Open in a new browser tab
+            window.open(sUrl, "_blank");
         },
         /* ===================================================== */
         /* SCANNER ERROR                                         */

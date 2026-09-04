@@ -220,7 +220,8 @@
 						<t:template>
 							<Link
                                 text="Instructions"
-                                href="{viewModel>WorkInstruction}"
+                                press=".onWorkInstructionPress"
+								enabled="{= !!${viewModel>WorkInstruction} }"
                                 target="_blank"
                             />
 						</t:template>
